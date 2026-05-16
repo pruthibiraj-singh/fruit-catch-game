@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fruit Catch Game</title>
+
+<style>
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial,sans-serif;
+}
+
+body{
+overflow:hidden;
+background:#6ecbff;
+}
+
+canvas{
+display:block;
+}
+
+.topBar{
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:95px;
+background:linear-gradient(to bottom,#03234b,#02162d);
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:0 30px;
+z-index:100;
+border-bottom:4px solid #3cbcff;
+}
+
+.panel{
+background:#08203d;
+border:3px solid #89d7ff;
+padding:15px 28px;
+border-radius:20px;
+color:white;
+font-size:22px;
+font-weight:bold;
+box-shadow:0 0 15px rgba(255,255,255,.15);
+}
+
+.score{
+color:#ffd633;
+}
+
+.lives{
+font-size:30px;
+}
+
+.title{
+font-size:52px;
+font-weight:bold;
+color:#ffcc00;
+text-shadow:
+3px 3px 0 #000,
+0 0 20px rgba(255,255,255,.25);
+letter-spacing:3px;
+}
+
+canvas{
+width:100vw;
+height:100vh;
+}
+</style>
+</head>
+
+<body>
+
+<div class="topBar">
+
+<div class="panel">
+SCORE:
+<span class="score" id="score">0</span>
+</div>
+
+<div class="title">
+🍃 FRUIT CATCH GAME 🍃
+</div>
+
+<div class="panel">
+LIVES:
+<span class="lives" id="lives">❤️❤️❤️</span>
+</div>
+
+</div>
+
+<canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById("game")
+const ctx = canvas.getContext("2d")
+
+let W,H
+
+function resize(){
+canvas.width = window.innerWidth
+canvas.height = window.innerHeight
+W = canvas.width
+H = canvas.height
+}
+
+resize()
+window.addEventListener("resize", resize)
+
+let score = 0
+let lives = 3
+
+const scoreEl = document.getElementById("score")
+const livesEl = document.getElementById("lives")
+
+let keys = {}
+
+const basket = {
+x:500,
+y:0,
+w:300,
+h:180,
+speed:11
+}
+
+const basketImg = new Image()
+basketImg.src = "basket.png"
+
+const bg = new Image()
+bg.src = "background.jpg"
+
+window.addEventListener("keydown", e=>{
+keys[e.key] = true
+})
+
+window.addEventListener("keyup", e=>{
+keys[e.key] = false
+})
+
+canvas.addEventListener("mousemove", e=>{
+basket.x = e.clientX - basket.w/2
+})
+
+canvas.addEventListener("touchmove", e=>{
+e.preventDefault()
+basket.x = e.touches[0].clientX - basket.w/2
+})
+
+let fruits=[]
+
+const fruitTypes=[
+{emoji:"🍎"},
+{emoji:"🍌"},
+{emoji:"🍇"},
+{emoji:"🍊"},
+{emoji:"🍓"}
+]
+
+function spawnFruit(){
+const t = fruitTypes[Math.random()*fruitTypes.length|0]
+
+fruits.push({
+x:Math.random()*(W-100)+50,
+y:-100,
+speed:3+Math.random()*2,
+emoji:t.emoji,
+size:65,
+rotation:Math.random()*6
+})
+}
+
+let clouds=[]
+
+for(let i=0;i<6;i++){
+clouds.push({
+x:Math.random()*W,
+y:50+Math.random()*180,
+size:80+Math.random()*80,
+speed:0.3+Math.random()*0.4
+})
+}
+
+function update(){
+basket.y = H-270
+
+if(Math.random()<0.005){
+spawnFruit()
+}
+
+if(keys["ArrowLeft"]){
+basket.x -= basket.speed
+}
+
+if(keys["ArrowRight"]){
+basket.x += basket.speed
+}
+
+basket.x = Math.max(0, Math.min(W-basket.w, basket.x))
+
+for(let i=fruits.length-1;i>=0;i--){
+
+let f = fruits[i]
+
+f.y += f.speed
+f.rotation += 0.03
+
+if(
+f.y+30 > basket.y+20 &&
+f.x > basket.x+20 &&
+f.x < basket.x+basket.w-20
+){
+score += 5
+scoreEl.textContent = score
+fruits.splice(i,1)
+continue
+}
+
+if(f.y > H){
+fruits.splice(i,1)
+lives--
+
+if(lives===3) livesEl.textContent="❤️❤️❤️"
+if(lives===2) livesEl.textContent="❤️❤️"
+if(lives===1) livesEl.textContent="❤️"
+
+if(lives<=0){
+livesEl.textContent=""
+
+setTimeout(()=>{
+alert("GAME OVER\n\nSCORE: "+score)
+location.reload()
+},100)
+}
+}
+}
+
+clouds.forEach(c=>{
+c.x += c.speed
+if(c.x > W+200){
+c.x = -200
+}
+})
+}
+
+function drawClouds(){
+ctx.fillStyle="rgba(255,255,255,.92)"
+
+clouds.forEach(c=>{
+ctx.beginPath()
+ctx.arc(c.x,c.y,c.size*.3,0,6.28)
+ctx.arc(c.x+50,c.y-20,c.size*.35,0,6.28)
+ctx.arc(c.x+100,c.y,c.size*.3,0,6.28)
+ctx.fill()
+})
+}
+
+function drawFruits(){
+fruits.forEach(f=>{
+ctx.save()
+ctx.translate(f.x,f.y)
+ctx.rotate(f.rotation)
+ctx.font = f.size+"px Arial"
+ctx.fillText(f.emoji,-25,25)
+ctx.restore()
+})
+}
+
+function drawBasket(){
+ctx.fillStyle="rgba(0,0,0,.25)"
+ctx.beginPath()
+ctx.ellipse(
+basket.x + basket.w/2,
+basket.y + basket.h + 15,
+basket.w/2.2,
+18,
+0,
+0,
+6.28
+)
+ctx.fill()
+
+ctx.drawImage(
+basketImg,
+basket.x,
+basket.y,
+basket.w,
+basket.h
+)
+}
+
+function gameLoop(){
+update()
+ctx.drawImage(bg,0,0,W,H)
+drawClouds()
+drawFruits()
+drawBasket()
+requestAnimationFrame(gameLoop)
+}
+
+basketImg.onload = () => {
+bg.onload = () => {
+gameLoop()
+}
+}
+</script>
+
+</body>
+</html>
